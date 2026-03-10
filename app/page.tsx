@@ -34,12 +34,16 @@ export default function Dashboard() {
     const headers = { "x-api-key": API_KEY };
 
     Promise.all([
-      fetch("/api/leads/stats", { headers }).then((r) => r.json()),
-      fetch("/api/leads?limit=20", { headers }).then((r) => r.json()),
+      fetch("/api/leads/stats", { headers }).then((r) =>
+        r.ok ? r.json() : null
+      ),
+      fetch("/api/leads?limit=20", { headers }).then((r) =>
+        r.ok ? r.json() : null
+      ),
     ])
       .then(([statsData, leadsData]) => {
-        setStats(statsData);
-        setLeads(leadsData.leads ?? []);
+        if (statsData) setStats(statsData);
+        if (leadsData) setLeads(leadsData.leads ?? []);
       })
       .catch(console.error)
       .finally(() => setLoading(false));
