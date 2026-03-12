@@ -2,7 +2,10 @@ import Database from "better-sqlite3";
 import path from "path";
 import { hashKey } from "./crypto";
 
-const DB_PATH = path.join(process.cwd(), "data", "leads.db");
+// On Vercel serverless, use /tmp (ephemeral). Locally, use ./data
+const DB_PATH = process.env.VERCEL
+  ? path.join("/tmp", "leads.db")
+  : path.join(process.cwd(), "data", "leads.db");
 
 let db: Database.Database;
 
