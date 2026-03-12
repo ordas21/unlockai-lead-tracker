@@ -65,11 +65,9 @@ export async function POST(req: NextRequest) {
     // Try to send verification email, but don't block signup if it fails
     let emailSent = true;
     try {
-      console.log("Sending verification email to:", email, "domain:", process.env.MAILGUN_DOMAIN, "key prefix:", process.env.MAILGUN_API_KEY?.slice(0, 8));
       await sendVerificationEmail(email, name, verifyUrl);
-    } catch (emailErr: unknown) {
-      const errMsg = emailErr instanceof Error ? emailErr.message : String(emailErr);
-      console.error("Failed to send verification email:", errMsg);
+    } catch (emailErr) {
+      console.error("Failed to send verification email:", emailErr);
       emailSent = false;
       // Auto-verify the user if we can't send email
       db.prepare("UPDATE users SET verified = 1, verify_token = NULL WHERE id = ?").run(id);
