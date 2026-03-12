@@ -59,6 +59,32 @@ function getDb() {
       CREATE INDEX IF NOT EXISTS idx_leads_source ON leads(source);
     `);
 
+    // Users
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS users (
+        id TEXT PRIMARY KEY,
+        email TEXT NOT NULL UNIQUE,
+        name TEXT NOT NULL,
+        password_hash TEXT NOT NULL,
+        verified INTEGER NOT NULL DEFAULT 0,
+        verify_token TEXT,
+        created_at TEXT NOT NULL DEFAULT (datetime('now'))
+      );
+      CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+      CREATE INDEX IF NOT EXISTS idx_users_verify ON users(verify_token);
+    `);
+
+    // Sessions
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS sessions (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        expires_at TEXT NOT NULL,
+        created_at TEXT NOT NULL DEFAULT (datetime('now'))
+      );
+      CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
+    `);
+
     // Notification config (per-project email settings)
     db.exec(`
       CREATE TABLE IF NOT EXISTS notification_config (

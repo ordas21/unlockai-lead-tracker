@@ -1,8 +1,15 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 
 // ── Types ──
+
+type User = {
+  id: string;
+  email: string;
+  name: string;
+};
 
 type Project = {
   id: string;
@@ -54,10 +61,6 @@ type NotificationConfig = {
 
 // ── Helpers ──
 
-function adminHeaders(secret: string) {
-  return { "Content-Type": "application/json", "x-admin-secret": secret };
-}
-
 const SOURCE_COLORS: Record<string, string> = {
   quote_form: "bg-blue-50 text-blue-700",
   chatbot: "bg-purple-50 text-purple-700",
@@ -84,54 +87,7 @@ function SourceBadge({ source }: { source: string }) {
 
 // ── Components ──
 
-function AuthGate({ onAuth }: { onAuth: (secret: string) => void }) {
-  const [value, setValue] = useState("");
-  const [error, setError] = useState(false);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const res = await fetch("/api/projects", {
-      headers: { "x-admin-secret": value },
-    });
-    if (res.ok) {
-      localStorage.setItem("admin-secret", value);
-      onAuth(value);
-    } else {
-      setError(true);
-    }
-  };
-
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50">
-      <form onSubmit={handleSubmit} className="w-full max-w-sm rounded-xl border bg-white p-8 shadow-sm">
-        <h1 className="text-xl font-bold text-gray-900">UnlockAI Lead Tracker</h1>
-        <p className="mt-1 text-sm text-gray-500">Enter your admin secret to continue.</p>
-        <input
-          type="password"
-          value={value}
-          onChange={(e) => { setValue(e.target.value); setError(false); }}
-          placeholder="Admin secret"
-          className="mt-4 w-full rounded-lg border px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-200"
-        />
-        {error && <p className="mt-2 text-sm text-red-500">Invalid secret</p>}
-        <button
-          type="submit"
-          className="mt-4 w-full rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-gray-800"
-        >
-          Sign In
-        </button>
-      </form>
-    </div>
-  );
-}
-
-function NewProjectForm({
-  secret,
-  onCreated,
-}: {
-  secret: string;
-  onCreated: () => void;
-}) {
+function NewProjectForm({ onCreated }: { onCreated: () => void }) {
   const [slug, setSlug] = useState("");
   const [name, setName] = useState("");
   const [open, setOpen] = useState(false);
@@ -140,7 +96,7 @@ function NewProjectForm({
     e.preventDefault();
     await fetch("/api/projects", {
       method: "POST",
-      headers: adminHeaders(secret),
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ slug, name }),
     });
     setSlug("");
@@ -188,21 +144,19 @@ function NewProjectForm({
   );
 }
 
-function ApiKeysPanel({ secret, projectId }: { secret: string; projectId: string }) {
+function ApiKeysPanel({ projectId }: { projectId: string }) {
   const [keys, setKeys] = useState<ApiKey[]>([]);
   const [newKey, setNewKey] = useState<string | null>(null);
   const [label, setLabel] = useState("production");
   const [showForm, setShowForm] = useState(false);
 
   const fetchKeys = useCallback(async () => {
-    const res = await fetch(`/api/projects/${projectId}/keys`, {
-      headers: adminHeaders(secret),
-    });
+    const res = await fetch(`/api/projects/${projectId}/keys`);
     if (res.ok) {
       const data = await res.json();
       setKeys(data.keys);
     }
-  }, [secret, projectId]);
+  }, [projectId]);
 
   useEffect(() => { fetchKeys(); }, [fetchKeys]);
 
@@ -210,7 +164,7 @@ function ApiKeysPanel({ secret, projectId }: { secret: string; projectId: string
     e.preventDefault();
     const res = await fetch(`/api/projects/${projectId}/keys`, {
       method: "POST",
-      headers: adminHeaders(secret),
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ label }),
     });
     if (res.ok) {
@@ -223,10 +177,7 @@ function ApiKeysPanel({ secret, projectId }: { secret: string; projectId: string
   };
 
   const revokeKey = async (keyId: string) => {
-    await fetch(`/api/projects/${projectId}/keys/${keyId}`, {
-      method: "PATCH",
-      headers: adminHeaders(secret),
-    });
+    await fetch(`/api/projects/${projectId}/keys/${keyId}`, { method: "PATCH" });
     fetchKeys();
   };
 
@@ -260,10 +211,7 @@ function ApiKeysPanel({ secret, projectId }: { secret: string; projectId: string
               Copy
             </button>
           </div>
-          <button
-            onClick={() => setNewKey(null)}
-            className="mt-2 text-xs text-green-700 underline"
-          >
+          <button onClick={() => setNewKey(null)} className="mt-2 text-xs text-green-700 underline">
             Dismiss
           </button>
         </div>
@@ -326,7 +274,7 @@ function ApiKeysPanel({ secret, projectId }: { secret: string; projectId: string
   );
 }
 
-function NotificationsPanel({ secret, projectId }: { secret: string; projectId: string }) {
+function NotificationsPanel({ projectId }: { projectId: string }) {
   const [config, setConfig] = useState<NotificationConfig | null>(null);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -340,9 +288,7 @@ function NotificationsPanel({ secret, projectId }: { secret: string; projectId: 
   });
 
   const fetchConfig = useCallback(async () => {
-    const res = await fetch(`/api/projects/${projectId}/notifications`, {
-      headers: adminHeaders(secret),
-    });
+    const res = await fetch(`/api/projects/${projectId}/notifications`);
     if (res.ok) {
       const data = await res.json();
       setConfig(data);
@@ -357,7 +303,7 @@ function NotificationsPanel({ secret, projectId }: { secret: string; projectId: 
         });
       }
     }
-  }, [secret, projectId]);
+  }, [projectId]);
 
   useEffect(() => { fetchConfig(); }, [fetchConfig]);
 
@@ -366,14 +312,13 @@ function NotificationsPanel({ secret, projectId }: { secret: string; projectId: 
     setSaving(true);
 
     const payload: Record<string, unknown> = { ...form };
-    // If editing existing and no new key entered, don't overwrite
     if (config?.configured && !form.mailgun_api_key) {
       delete payload.mailgun_api_key;
     }
 
     await fetch(`/api/projects/${projectId}/notifications`, {
       method: "PUT",
-      headers: adminHeaders(secret),
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
     setSaving(false);
@@ -382,10 +327,7 @@ function NotificationsPanel({ secret, projectId }: { secret: string; projectId: 
   };
 
   const handleDelete = async () => {
-    await fetch(`/api/projects/${projectId}/notifications`, {
-      method: "DELETE",
-      headers: adminHeaders(secret),
-    });
+    await fetch(`/api/projects/${projectId}/notifications`, { method: "DELETE" });
     setConfig({ configured: false });
     setForm({
       enabled: true,
@@ -441,16 +383,10 @@ function NotificationsPanel({ secret, projectId }: { secret: string; projectId: 
             <code className="text-xs text-gray-600">{config.mailgun_api_key_masked}</code>
           </div>
           <div className="flex gap-2 pt-2">
-            <button
-              onClick={() => setEditing(true)}
-              className="rounded bg-gray-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-800"
-            >
+            <button onClick={() => setEditing(true)} className="rounded bg-gray-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-800">
               Edit
             </button>
-            <button
-              onClick={handleDelete}
-              className="rounded border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"
-            >
+            <button onClick={handleDelete} className="rounded border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50">
               Remove
             </button>
           </div>
@@ -514,18 +450,10 @@ function NotificationsPanel({ secret, projectId }: { secret: string; projectId: 
             />
           </div>
           <div className="flex gap-2 pt-1">
-            <button
-              type="submit"
-              disabled={saving}
-              className="rounded bg-gray-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-800 disabled:opacity-50"
-            >
+            <button type="submit" disabled={saving} className="rounded bg-gray-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-800 disabled:opacity-50">
               {saving ? "Saving..." : "Save"}
             </button>
-            <button
-              type="button"
-              onClick={() => setEditing(false)}
-              className="rounded border px-3 py-1.5 text-xs text-gray-500 hover:bg-gray-50"
-            >
+            <button type="button" onClick={() => setEditing(false)} className="rounded border px-3 py-1.5 text-xs text-gray-500 hover:bg-gray-50">
               Cancel
             </button>
           </div>
@@ -538,7 +466,8 @@ function NotificationsPanel({ secret, projectId }: { secret: string; projectId: 
 // ── Main Dashboard ──
 
 export default function Dashboard() {
-  const [secret, setSecret] = useState<string | null>(null);
+  const router = useRouter();
+  const [user, setUser] = useState<User | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [stats, setStats] = useState<Stats | null>(null);
@@ -555,45 +484,53 @@ export default function Dashboard() {
   // Tab
   const [activeTab, setActiveTab] = useState<"overview" | "leads" | "settings">("overview");
 
-  // Check for saved secret
+  // Check session on mount
   useEffect(() => {
-    const saved = localStorage.getItem("admin-secret");
-    if (saved) setSecret(saved);
-    else setLoading(false);
-  }, []);
+    fetch("/api/auth/me")
+      .then((r) => {
+        if (!r.ok) {
+          router.push("/login");
+          return null;
+        }
+        return r.json();
+      })
+      .then((data) => {
+        if (data?.authenticated) {
+          setUser(data.user);
+          setLoading(false);
+        }
+      })
+      .catch(() => {
+        router.push("/login");
+      });
+  }, [router]);
 
   const fetchProjects = useCallback(async () => {
-    if (!secret) return;
-    const res = await fetch("/api/projects", { headers: adminHeaders(secret) });
+    const res = await fetch("/api/projects");
     if (res.ok) {
       const data = await res.json();
       setProjects(data.projects);
       if (!selectedId && data.projects.length > 0) {
         setSelectedId(data.projects[0].id);
       }
-    } else {
-      localStorage.removeItem("admin-secret");
-      setSecret(null);
     }
-    setLoading(false);
-  }, [secret, selectedId]);
+  }, [selectedId]);
 
-  useEffect(() => { fetchProjects(); }, [fetchProjects]);
+  useEffect(() => {
+    if (user) fetchProjects();
+  }, [user, fetchProjects]);
 
   // Fetch stats when project changes
   useEffect(() => {
-    if (!secret || !selectedId) return;
-    const h = adminHeaders(secret);
-
-    fetch(`/api/leads/stats?projectId=${selectedId}`, { headers: h })
+    if (!user || !selectedId) return;
+    fetch(`/api/leads/stats?projectId=${selectedId}`)
       .then((r) => r.ok ? r.json() : null)
       .then((s) => setStats(s));
-  }, [secret, selectedId]);
+  }, [user, selectedId]);
 
   // Fetch leads with filters
   const fetchLeads = useCallback(async () => {
-    if (!secret || !selectedId) return;
-    const h = adminHeaders(secret);
+    if (!user || !selectedId) return;
     const params = new URLSearchParams({
       projectId: selectedId,
       limit: String(PAGE_SIZE),
@@ -601,13 +538,13 @@ export default function Dashboard() {
     });
     if (sourceFilter) params.set("source", sourceFilter);
 
-    const res = await fetch(`/api/leads?${params}`, { headers: h });
+    const res = await fetch(`/api/leads?${params}`);
     if (res.ok) {
       const data = await res.json();
       setLeads(data.leads ?? []);
       setTotalLeads(data.total ?? 0);
     }
-  }, [secret, selectedId, sourceFilter, page]);
+  }, [user, selectedId, sourceFilter, page]);
 
   useEffect(() => { fetchLeads(); }, [fetchLeads]);
 
@@ -640,20 +577,24 @@ export default function Dashboard() {
     URL.revokeObjectURL(url);
   };
 
+  const handleLogout = async () => {
+    await fetch("/api/auth/logout", { method: "POST" });
+    router.push("/login");
+  };
+
   const filteredLeads = typeFilter
     ? leads.filter((l) => l.type === typeFilter)
     : leads;
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <p className="text-gray-500">Loading...</p>
+      <div className="flex min-h-screen items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-gray-300 border-t-gray-900" />
+          <p className="mt-3 text-sm text-gray-500">Loading...</p>
+        </div>
       </div>
     );
-  }
-
-  if (!secret) {
-    return <AuthGate onAuth={setSecret} />;
   }
 
   const selectedProject = projects.find((p) => p.id === selectedId);
@@ -686,19 +627,25 @@ export default function Dashboard() {
             </button>
           ))}
           <div className="pt-2">
-            <NewProjectForm secret={secret} onCreated={fetchProjects} />
+            <NewProjectForm onCreated={fetchProjects} />
           </div>
         </div>
 
-        <button
-          onClick={() => {
-            localStorage.removeItem("admin-secret");
-            setSecret(null);
-          }}
-          className="mt-8 text-xs text-gray-400 hover:text-gray-600"
-        >
-          Sign out
-        </button>
+        {/* User info + logout */}
+        <div className="mt-8 border-t pt-4">
+          {user && (
+            <div className="mb-2">
+              <p className="truncate text-sm font-medium text-gray-900">{user.name}</p>
+              <p className="truncate text-[11px] text-gray-400">{user.email}</p>
+            </div>
+          )}
+          <button
+            onClick={handleLogout}
+            className="text-xs text-gray-400 hover:text-gray-600"
+          >
+            Sign out
+          </button>
+        </div>
       </aside>
 
       {/* Main content */}
@@ -741,7 +688,6 @@ export default function Dashboard() {
             {/* Overview Tab */}
             {activeTab === "overview" && (
               <>
-                {/* Stat Cards */}
                 <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-4">
                   {[
                     { label: "Total Leads", value: stats?.total ?? 0, color: "text-gray-900" },
@@ -756,7 +702,6 @@ export default function Dashboard() {
                   ))}
                 </div>
 
-                {/* Breakdowns */}
                 <div className="mt-6 grid gap-6 lg:grid-cols-2">
                   <div className="rounded-xl border bg-white p-5 shadow-sm">
                     <h3 className="text-sm font-semibold text-gray-900">By Source</h3>
@@ -772,10 +717,7 @@ export default function Dashboard() {
                                 <span className="text-sm font-semibold text-gray-900">{count}</span>
                               </div>
                               <div className="h-1.5 rounded-full bg-gray-100">
-                                <div
-                                  className="h-1.5 rounded-full bg-blue-500 transition-all"
-                                  style={{ width: `${pct}%` }}
-                                />
+                                <div className="h-1.5 rounded-full bg-blue-500 transition-all" style={{ width: `${pct}%` }} />
                               </div>
                             </div>
                           );
@@ -796,16 +738,11 @@ export default function Dashboard() {
                           return (
                             <div key={type}>
                               <div className="flex items-center justify-between mb-1">
-                                <span className="rounded-full bg-green-50 px-3 py-1 text-xs font-medium text-green-700">
-                                  {type}
-                                </span>
+                                <span className="rounded-full bg-green-50 px-3 py-1 text-xs font-medium text-green-700">{type}</span>
                                 <span className="text-sm font-semibold text-gray-900">{count}</span>
                               </div>
                               <div className="h-1.5 rounded-full bg-gray-100">
-                                <div
-                                  className="h-1.5 rounded-full bg-green-500 transition-all"
-                                  style={{ width: `${pct}%` }}
-                                />
+                                <div className="h-1.5 rounded-full bg-green-500 transition-all" style={{ width: `${pct}%` }} />
                               </div>
                             </div>
                           );
@@ -817,14 +754,10 @@ export default function Dashboard() {
                   </div>
                 </div>
 
-                {/* Recent leads preview */}
                 <div className="mt-6 rounded-xl border bg-white shadow-sm">
                   <div className="flex items-center justify-between border-b px-5 py-4">
                     <h3 className="text-sm font-semibold text-gray-900">Recent Leads</h3>
-                    <button
-                      onClick={() => setActiveTab("leads")}
-                      className="text-xs font-medium text-blue-600 hover:text-blue-800"
-                    >
+                    <button onClick={() => setActiveTab("leads")} className="text-xs font-medium text-blue-600 hover:text-blue-800">
                       View All
                     </button>
                   </div>
@@ -846,32 +779,22 @@ export default function Dashboard() {
                               <td className="px-5 py-3 font-medium text-gray-900">{lead.name ?? "—"}</td>
                               <td className="px-5 py-3">
                                 <div className="text-gray-600">{lead.email ?? "—"}</div>
-                                {lead.phone && (
-                                  <div className="text-xs text-gray-400">{lead.phone}</div>
-                                )}
+                                {lead.phone && <div className="text-xs text-gray-400">{lead.phone}</div>}
                               </td>
                               <td className="px-5 py-3">
                                 {lead.type ? (
-                                  <span className="rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700">
-                                    {lead.type}
-                                  </span>
+                                  <span className="rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700">{lead.type}</span>
                                 ) : "—"}
                               </td>
-                              <td className="px-5 py-3">
-                                <SourceBadge source={lead.source} />
-                              </td>
-                              <td className="px-5 py-3 text-gray-500 whitespace-nowrap">
-                                {new Date(lead.created_at).toLocaleDateString()}
-                              </td>
+                              <td className="px-5 py-3"><SourceBadge source={lead.source} /></td>
+                              <td className="px-5 py-3 text-gray-500 whitespace-nowrap">{new Date(lead.created_at).toLocaleDateString()}</td>
                             </tr>
                           ))}
                         </tbody>
                       </table>
                     </div>
                   ) : (
-                    <div className="px-5 py-10 text-center text-gray-400">
-                      No leads recorded yet.
-                    </div>
+                    <div className="px-5 py-10 text-center text-gray-400">No leads recorded yet.</div>
                   )}
                 </div>
               </>
@@ -880,7 +803,6 @@ export default function Dashboard() {
             {/* Leads Tab */}
             {activeTab === "leads" && (
               <>
-                {/* Filters + Export */}
                 <div className="mt-6 flex flex-wrap items-center gap-3">
                   <select
                     value={sourceFilter}
@@ -904,18 +826,12 @@ export default function Dashboard() {
                     ))}
                   </select>
                   <div className="flex-1" />
-                  <span className="text-xs text-gray-500">
-                    {totalLeads} total lead{totalLeads !== 1 ? "s" : ""}
-                  </span>
-                  <button
-                    onClick={exportCSV}
-                    className="rounded-lg border bg-white px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50"
-                  >
+                  <span className="text-xs text-gray-500">{totalLeads} total lead{totalLeads !== 1 ? "s" : ""}</span>
+                  <button onClick={exportCSV} className="rounded-lg border bg-white px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50">
                     Export CSV
                   </button>
                 </div>
 
-                {/* Leads Table */}
                 <div className="mt-4 rounded-xl border bg-white shadow-sm">
                   {filteredLeads.length ? (
                     <div className="overflow-x-auto">
@@ -938,30 +854,21 @@ export default function Dashboard() {
                               <td className="px-5 py-3 text-gray-600">{lead.phone ?? "—"}</td>
                               <td className="px-5 py-3">
                                 {lead.type ? (
-                                  <span className="rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700">
-                                    {lead.type}
-                                  </span>
+                                  <span className="rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700">{lead.type}</span>
                                 ) : "—"}
                               </td>
-                              <td className="px-5 py-3">
-                                <SourceBadge source={lead.source} />
-                              </td>
-                              <td className="px-5 py-3 text-gray-500 whitespace-nowrap">
-                                {new Date(lead.created_at).toLocaleString()}
-                              </td>
+                              <td className="px-5 py-3"><SourceBadge source={lead.source} /></td>
+                              <td className="px-5 py-3 text-gray-500 whitespace-nowrap">{new Date(lead.created_at).toLocaleString()}</td>
                             </tr>
                           ))}
                         </tbody>
                       </table>
                     </div>
                   ) : (
-                    <div className="px-5 py-10 text-center text-gray-400">
-                      No leads match the current filters.
-                    </div>
+                    <div className="px-5 py-10 text-center text-gray-400">No leads match the current filters.</div>
                   )}
                 </div>
 
-                {/* Pagination */}
                 {totalLeads > PAGE_SIZE && (
                   <div className="mt-4 flex items-center justify-between">
                     <button
@@ -971,9 +878,7 @@ export default function Dashboard() {
                     >
                       Previous
                     </button>
-                    <span className="text-xs text-gray-500">
-                      Page {page + 1} of {Math.ceil(totalLeads / PAGE_SIZE)}
-                    </span>
+                    <span className="text-xs text-gray-500">Page {page + 1} of {Math.ceil(totalLeads / PAGE_SIZE)}</span>
                     <button
                       onClick={() => setPage((p) => p + 1)}
                       disabled={(page + 1) * PAGE_SIZE >= totalLeads}
@@ -989,8 +894,8 @@ export default function Dashboard() {
             {/* Settings Tab */}
             {activeTab === "settings" && (
               <div className="mt-6 grid gap-6 lg:grid-cols-2">
-                <ApiKeysPanel secret={secret} projectId={selectedProject.id} />
-                <NotificationsPanel secret={secret} projectId={selectedProject.id} />
+                <ApiKeysPanel projectId={selectedProject.id} />
+                <NotificationsPanel projectId={selectedProject.id} />
               </div>
             )}
           </>
