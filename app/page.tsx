@@ -2,87 +2,29 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 
 // ── Types ──
 
-type User = {
-  id: string;
-  email: string;
-  name: string;
-};
-
-type Project = {
-  id: string;
-  slug: string;
-  name: string;
-  created_at: string;
-  lead_count: number;
-  active_keys: number;
-};
-
-type ApiKey = {
-  id: string;
-  key_prefix: string;
-  label: string;
-  created_at: string;
-  revoked_at: string | null;
-};
-
-type Stats = {
-  total: number;
-  today: number;
-  thisWeek: number;
-  thisMonth: number;
-  bySource: { source: string; count: number }[];
-  byType: { type: string; count: number }[];
-  daily: { date: string; count: number }[];
-};
-
-type Lead = {
-  id: string;
-  source: string;
-  name: string | null;
-  email: string | null;
-  phone: string | null;
-  type: string | null;
-  metadata: string | null;
-  created_at: string;
-};
-
-type NotificationConfig = {
-  configured: boolean;
-  enabled?: boolean;
-  to_email?: string;
-  from_name?: string;
-  mailgun_domain?: string;
-  mailgun_base_url?: string;
-  mailgun_api_key_masked?: string;
-};
+type User = { id: string; email: string; name: string };
+type Project = { id: string; slug: string; name: string; created_at: string; lead_count: number; active_keys: number };
+type ApiKey = { id: string; key_prefix: string; label: string; created_at: string; revoked_at: string | null };
+type Stats = { total: number; today: number; thisWeek: number; thisMonth: number; bySource: { source: string; count: number }[]; byType: { type: string; count: number }[]; daily: { date: string; count: number }[] };
+type Lead = { id: string; source: string; name: string | null; email: string | null; phone: string | null; type: string | null; metadata: string | null; created_at: string };
+type NotificationConfig = { configured: boolean; enabled?: boolean; to_email?: string; from_name?: string; mailgun_domain?: string; mailgun_base_url?: string; mailgun_api_key_masked?: string };
 
 // ── Helpers ──
 
-const SOURCE_COLORS: Record<string, string> = {
-  quote_form: "bg-blue-50 text-blue-700",
-  chatbot: "bg-purple-50 text-purple-700",
-  phone_click: "bg-amber-50 text-amber-700",
-  contact_form: "bg-green-50 text-green-700",
-};
-
-const SOURCE_LABELS: Record<string, string> = {
-  quote_form: "Quote Form",
-  chatbot: "Chatbot",
-  phone_click: "Phone Click",
-  contact_form: "Contact Form",
-};
+const SOURCE_LABELS: Record<string, string> = { quote_form: "Quote Form", chatbot: "Chatbot", phone_click: "Phone Click", contact_form: "Contact Form" };
+const SOURCE_VARIANTS: Record<string, "default" | "secondary" | "outline" | "destructive"> = { quote_form: "default", chatbot: "secondary", phone_click: "outline", contact_form: "secondary" };
 
 function SourceBadge({ source }: { source: string }) {
-  const color = SOURCE_COLORS[source] || "bg-gray-100 text-gray-700";
-  const label = SOURCE_LABELS[source] || source;
-  return (
-    <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${color}`}>
-      {label}
-    </span>
-  );
+  return <Badge variant={SOURCE_VARIANTS[source] || "outline"}>{SOURCE_LABELS[source] || source}</Badge>;
 }
 
 // ── Components ──
@@ -94,51 +36,23 @@ function NewProjectForm({ onCreated }: { onCreated: () => void }) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await fetch("/api/projects", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ slug, name }),
-    });
-    setSlug("");
-    setName("");
-    setOpen(false);
-    onCreated();
+    await fetch("/api/projects", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ slug, name }) });
+    setSlug(""); setName(""); setOpen(false); onCreated();
   };
 
-  if (!open) {
-    return (
-      <button
-        onClick={() => setOpen(true)}
-        className="w-full rounded-lg border-2 border-dashed border-gray-300 px-4 py-3 text-sm text-gray-500 hover:border-gray-400 hover:text-gray-700"
-      >
-        + New Project
-      </button>
-    );
-  }
+  if (!open) return (
+    <button onClick={() => setOpen(true)} className="w-full rounded-md border-2 border-dashed border-border px-4 py-2.5 text-sm text-muted-foreground hover:border-primary/40 hover:text-foreground transition-colors">
+      + New Project
+    </button>
+  );
 
   return (
-    <form onSubmit={handleSubmit} className="rounded-lg border bg-white p-4 shadow-sm">
-      <input
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        placeholder="Project name"
-        className="w-full rounded border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-200"
-        required
-      />
-      <input
-        value={slug}
-        onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-"))}
-        placeholder="project-slug"
-        className="mt-2 w-full rounded border px-3 py-2 text-sm font-mono outline-none focus:ring-2 focus:ring-blue-200"
-        required
-      />
-      <div className="mt-3 flex gap-2">
-        <button type="submit" className="rounded bg-gray-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-800">
-          Create
-        </button>
-        <button type="button" onClick={() => setOpen(false)} className="rounded border px-3 py-1.5 text-xs text-gray-500 hover:bg-gray-50">
-          Cancel
-        </button>
+    <form onSubmit={handleSubmit} className="space-y-2 rounded-md border bg-card p-3">
+      <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Project name" required />
+      <Input value={slug} onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-"))} placeholder="project-slug" className="font-mono text-xs" required />
+      <div className="flex gap-2">
+        <Button type="submit" size="sm">Create</Button>
+        <Button type="button" variant="ghost" size="sm" onClick={() => setOpen(false)}>Cancel</Button>
       </div>
     </form>
   );
@@ -152,28 +66,15 @@ function ApiKeysPanel({ projectId }: { projectId: string }) {
 
   const fetchKeys = useCallback(async () => {
     const res = await fetch(`/api/projects/${projectId}/keys`);
-    if (res.ok) {
-      const data = await res.json();
-      setKeys(data.keys);
-    }
+    if (res.ok) { const d = await res.json(); setKeys(d.keys); }
   }, [projectId]);
 
   useEffect(() => { fetchKeys(); }, [fetchKeys]);
 
   const generateKey = async (e: React.FormEvent) => {
     e.preventDefault();
-    const res = await fetch(`/api/projects/${projectId}/keys`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ label }),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      setNewKey(data.key);
-      setShowForm(false);
-      setLabel("production");
-      fetchKeys();
-    }
+    const res = await fetch(`/api/projects/${projectId}/keys`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ label }) });
+    if (res.ok) { const d = await res.json(); setNewKey(d.key); setShowForm(false); setLabel("production"); fetchKeys(); }
   };
 
   const revokeKey = async (keyId: string) => {
@@ -182,95 +83,54 @@ function ApiKeysPanel({ projectId }: { projectId: string }) {
   };
 
   return (
-    <div className="rounded-xl border bg-white p-5 shadow-sm">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-gray-900">API Keys</h3>
-        {!showForm && (
-          <button
-            onClick={() => setShowForm(true)}
-            className="rounded-lg bg-gray-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-800"
-          >
-            Generate
-          </button>
-        )}
-      </div>
-
-      {newKey && (
-        <div className="mt-4 rounded-lg border border-green-200 bg-green-50 p-4">
-          <p className="text-xs font-medium text-green-800">
-            Copy this key now — you won&apos;t see it again.
-          </p>
-          <div className="mt-2 flex items-center gap-2">
-            <code className="flex-1 break-all rounded bg-white px-3 py-2 text-xs font-mono text-green-900 border">
-              {newKey}
-            </code>
-            <button
-              onClick={() => { navigator.clipboard.writeText(newKey); }}
-              className="shrink-0 rounded bg-green-600 px-3 py-2 text-xs font-medium text-white hover:bg-green-700"
-            >
-              Copy
-            </button>
-          </div>
-          <button onClick={() => setNewKey(null)} className="mt-2 text-xs text-green-700 underline">
-            Dismiss
-          </button>
-        </div>
-      )}
-
-      {showForm && (
-        <form onSubmit={generateKey} className="mt-4 flex items-end gap-2">
-          <div className="flex-1">
-            <label className="text-xs text-gray-500">Label</label>
-            <input
-              value={label}
-              onChange={(e) => setLabel(e.target.value)}
-              className="mt-1 w-full rounded border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-200"
-              placeholder="production, staging, etc."
-            />
-          </div>
-          <button type="submit" className="rounded bg-gray-900 px-3 py-2 text-xs font-medium text-white hover:bg-gray-800">
-            Generate
-          </button>
-          <button type="button" onClick={() => setShowForm(false)} className="rounded border px-3 py-2 text-xs text-gray-500 hover:bg-gray-50">
-            Cancel
-          </button>
-        </form>
-      )}
-
-      <div className="mt-4 divide-y">
-        {keys.length === 0 && (
-          <p className="py-4 text-center text-sm text-gray-400">No API keys yet</p>
-        )}
-        {keys.map((k) => (
-          <div key={k.id} className="flex items-center justify-between py-3">
-            <div>
-              <div className="flex items-center gap-2">
-                <code className="text-xs font-mono text-gray-600">{k.key_prefix}</code>
-                <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-700">
-                  {k.label}
-                </span>
-                {k.revoked_at && (
-                  <span className="rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-medium text-red-600">
-                    revoked
-                  </span>
-                )}
-              </div>
-              <p className="mt-0.5 text-[10px] text-gray-400">
-                Created {new Date(k.created_at).toLocaleDateString()}
-              </p>
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+        <CardTitle className="text-sm font-medium">API Keys</CardTitle>
+        {!showForm && <Button size="sm" variant="outline" onClick={() => setShowForm(true)}>Generate</Button>}
+      </CardHeader>
+      <CardContent>
+        {newKey && (
+          <div className="mb-4 rounded-lg border border-chart-4/30 bg-chart-4/10 p-3">
+            <p className="text-xs font-medium">Copy this key now — you won&apos;t see it again.</p>
+            <div className="mt-2 flex items-center gap-2">
+              <code className="flex-1 break-all rounded border bg-card px-2 py-1.5 text-xs font-mono">{newKey}</code>
+              <Button size="sm" variant="outline" onClick={() => navigator.clipboard.writeText(newKey)}>Copy</Button>
             </div>
-            {!k.revoked_at && (
-              <button
-                onClick={() => revokeKey(k.id)}
-                className="rounded border border-red-200 px-2 py-1 text-[10px] font-medium text-red-600 hover:bg-red-50"
-              >
-                Revoke
-              </button>
-            )}
+            <button onClick={() => setNewKey(null)} className="mt-2 text-xs text-muted-foreground underline">Dismiss</button>
           </div>
-        ))}
-      </div>
-    </div>
+        )}
+
+        {showForm && (
+          <form onSubmit={generateKey} className="mb-4 flex items-end gap-2">
+            <div className="flex-1 space-y-1">
+              <Label className="text-xs">Label</Label>
+              <Input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="production, staging..." />
+            </div>
+            <Button type="submit" size="sm">Generate</Button>
+            <Button type="button" variant="ghost" size="sm" onClick={() => setShowForm(false)}>Cancel</Button>
+          </form>
+        )}
+
+        <div className="divide-y">
+          {keys.length === 0 && <p className="py-6 text-center text-sm text-muted-foreground">No API keys yet</p>}
+          {keys.map((k) => (
+            <div key={k.id} className="flex items-center justify-between py-3">
+              <div>
+                <div className="flex items-center gap-2">
+                  <code className="text-xs font-mono text-muted-foreground">{k.key_prefix}</code>
+                  <Badge variant="secondary" className="text-[10px]">{k.label}</Badge>
+                  {k.revoked_at && <Badge variant="destructive" className="text-[10px]">revoked</Badge>}
+                </div>
+                <p className="mt-0.5 text-[10px] text-muted-foreground">Created {new Date(k.created_at).toLocaleDateString()}</p>
+              </div>
+              {!k.revoked_at && (
+                <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive text-xs" onClick={() => revokeKey(k.id)}>Revoke</Button>
+              )}
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -278,188 +138,81 @@ function NotificationsPanel({ projectId }: { projectId: string }) {
   const [config, setConfig] = useState<NotificationConfig | null>(null);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({
-    enabled: true,
-    to_email: "",
-    from_name: "Lead Tracker",
-    mailgun_api_key: "",
-    mailgun_domain: "",
-    mailgun_base_url: "https://api.mailgun.net",
-  });
+  const [form, setForm] = useState({ enabled: true, to_email: "", from_name: "Lead Tracker", mailgun_api_key: "", mailgun_domain: "", mailgun_base_url: "https://api.mailgun.net" });
 
   const fetchConfig = useCallback(async () => {
     const res = await fetch(`/api/projects/${projectId}/notifications`);
     if (res.ok) {
-      const data = await res.json();
-      setConfig(data);
-      if (data.configured) {
-        setForm({
-          enabled: data.enabled,
-          to_email: data.to_email || "",
-          from_name: data.from_name || "Lead Tracker",
-          mailgun_api_key: "",
-          mailgun_domain: data.mailgun_domain || "",
-          mailgun_base_url: data.mailgun_base_url || "https://api.mailgun.net",
-        });
-      }
+      const d = await res.json(); setConfig(d);
+      if (d.configured) setForm({ enabled: d.enabled, to_email: d.to_email || "", from_name: d.from_name || "Lead Tracker", mailgun_api_key: "", mailgun_domain: d.mailgun_domain || "", mailgun_base_url: d.mailgun_base_url || "https://api.mailgun.net" });
     }
   }, [projectId]);
 
   useEffect(() => { fetchConfig(); }, [fetchConfig]);
 
   const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSaving(true);
-
+    e.preventDefault(); setSaving(true);
     const payload: Record<string, unknown> = { ...form };
-    if (config?.configured && !form.mailgun_api_key) {
-      delete payload.mailgun_api_key;
-    }
-
-    await fetch(`/api/projects/${projectId}/notifications`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    setSaving(false);
-    setEditing(false);
-    fetchConfig();
+    if (config?.configured && !form.mailgun_api_key) delete payload.mailgun_api_key;
+    await fetch(`/api/projects/${projectId}/notifications`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+    setSaving(false); setEditing(false); fetchConfig();
   };
 
   const handleDelete = async () => {
     await fetch(`/api/projects/${projectId}/notifications`, { method: "DELETE" });
-    setConfig({ configured: false });
-    setForm({
-      enabled: true,
-      to_email: "",
-      from_name: "Lead Tracker",
-      mailgun_api_key: "",
-      mailgun_domain: "",
-      mailgun_base_url: "https://api.mailgun.net",
-    });
-    setEditing(false);
+    setConfig({ configured: false }); setEditing(false);
   };
 
   if (!config) return null;
 
   return (
-    <div className="rounded-xl border bg-white p-5 shadow-sm">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-gray-900">Email Notifications</h3>
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+        <CardTitle className="text-sm font-medium">Email Notifications</CardTitle>
         {config.configured && !editing && (
           <div className="flex items-center gap-2">
-            <span className={`h-2 w-2 rounded-full ${config.enabled ? "bg-green-500" : "bg-gray-300"}`} />
-            <span className="text-xs text-gray-500">{config.enabled ? "Active" : "Disabled"}</span>
+            <span className={`h-2 w-2 rounded-full ${config.enabled ? "bg-chart-4" : "bg-muted"}`} />
+            <span className="text-xs text-muted-foreground">{config.enabled ? "Active" : "Off"}</span>
           </div>
         )}
-      </div>
-
-      {!config.configured && !editing ? (
-        <div className="mt-4">
-          <p className="text-sm text-gray-400">No email notifications configured.</p>
-          <button
-            onClick={() => setEditing(true)}
-            className="mt-3 rounded-lg bg-gray-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-800"
-          >
-            Configure
-          </button>
-        </div>
-      ) : !editing ? (
-        <div className="mt-4 space-y-2">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-500">To</span>
-            <span className="font-medium text-gray-900">{config.to_email}</span>
-          </div>
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-500">From Name</span>
-            <span className="text-gray-700">{config.from_name}</span>
-          </div>
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-500">Domain</span>
-            <code className="text-xs text-gray-600">{config.mailgun_domain}</code>
-          </div>
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-500">API Key</span>
-            <code className="text-xs text-gray-600">{config.mailgun_api_key_masked}</code>
-          </div>
-          <div className="flex gap-2 pt-2">
-            <button onClick={() => setEditing(true)} className="rounded bg-gray-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-800">
-              Edit
-            </button>
-            <button onClick={handleDelete} className="rounded border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50">
-              Remove
-            </button>
-          </div>
-        </div>
-      ) : (
-        <form onSubmit={handleSave} className="mt-4 space-y-3">
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={form.enabled}
-              onChange={(e) => setForm({ ...form, enabled: e.target.checked })}
-              className="rounded"
-            />
-            <span className="text-gray-700">Enabled</span>
-          </label>
+      </CardHeader>
+      <CardContent>
+        {!config.configured && !editing ? (
           <div>
-            <label className="text-xs text-gray-500">Send To (comma-separated)</label>
-            <input
-              value={form.to_email}
-              onChange={(e) => setForm({ ...form, to_email: e.target.value })}
-              className="mt-1 w-full rounded border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-200"
-              placeholder="leads@example.com"
-              required
-            />
+            <p className="text-sm text-muted-foreground">No notifications configured.</p>
+            <Button size="sm" className="mt-3" onClick={() => setEditing(true)}>Configure</Button>
           </div>
-          <div>
-            <label className="text-xs text-gray-500">From Name</label>
-            <input
-              value={form.from_name}
-              onChange={(e) => setForm({ ...form, from_name: e.target.value })}
-              className="mt-1 w-full rounded border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-200"
-              placeholder="Sparks Insurance"
-            />
+        ) : !editing ? (
+          <div className="space-y-2 text-sm">
+            <div className="flex justify-between"><span className="text-muted-foreground">To</span><span className="font-medium">{config.to_email}</span></div>
+            <div className="flex justify-between"><span className="text-muted-foreground">From</span><span>{config.from_name}</span></div>
+            <div className="flex justify-between"><span className="text-muted-foreground">Domain</span><code className="text-xs">{config.mailgun_domain}</code></div>
+            <div className="flex justify-between"><span className="text-muted-foreground">API Key</span><code className="text-xs">{config.mailgun_api_key_masked}</code></div>
+            <Separator />
+            <div className="flex gap-2">
+              <Button size="sm" variant="outline" onClick={() => setEditing(true)}>Edit</Button>
+              <Button size="sm" variant="ghost" className="text-destructive" onClick={handleDelete}>Remove</Button>
+            </div>
           </div>
-          <div>
-            <label className="text-xs text-gray-500">Mailgun API Key</label>
-            <input
-              value={form.mailgun_api_key}
-              onChange={(e) => setForm({ ...form, mailgun_api_key: e.target.value })}
-              className="mt-1 w-full rounded border px-3 py-2 text-sm font-mono outline-none focus:ring-2 focus:ring-blue-200"
-              placeholder={config?.configured ? "Leave blank to keep current" : "key-xxxxx"}
-              required={!config?.configured}
-            />
-          </div>
-          <div>
-            <label className="text-xs text-gray-500">Mailgun Domain</label>
-            <input
-              value={form.mailgun_domain}
-              onChange={(e) => setForm({ ...form, mailgun_domain: e.target.value })}
-              className="mt-1 w-full rounded border px-3 py-2 text-sm font-mono outline-none focus:ring-2 focus:ring-blue-200"
-              placeholder="mg.example.com"
-              required
-            />
-          </div>
-          <div>
-            <label className="text-xs text-gray-500">Mailgun Base URL</label>
-            <input
-              value={form.mailgun_base_url}
-              onChange={(e) => setForm({ ...form, mailgun_base_url: e.target.value })}
-              className="mt-1 w-full rounded border px-3 py-2 text-sm font-mono outline-none focus:ring-2 focus:ring-blue-200"
-            />
-          </div>
-          <div className="flex gap-2 pt-1">
-            <button type="submit" disabled={saving} className="rounded bg-gray-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-800 disabled:opacity-50">
-              {saving ? "Saving..." : "Save"}
-            </button>
-            <button type="button" onClick={() => setEditing(false)} className="rounded border px-3 py-1.5 text-xs text-gray-500 hover:bg-gray-50">
-              Cancel
-            </button>
-          </div>
-        </form>
-      )}
-    </div>
+        ) : (
+          <form onSubmit={handleSave} className="space-y-3">
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={form.enabled} onChange={(e) => setForm({ ...form, enabled: e.target.checked })} className="rounded" />
+              Enabled
+            </label>
+            <div className="space-y-1"><Label className="text-xs">Send To</Label><Input value={form.to_email} onChange={(e) => setForm({ ...form, to_email: e.target.value })} placeholder="leads@example.com" required /></div>
+            <div className="space-y-1"><Label className="text-xs">From Name</Label><Input value={form.from_name} onChange={(e) => setForm({ ...form, from_name: e.target.value })} /></div>
+            <div className="space-y-1"><Label className="text-xs">Mailgun API Key</Label><Input value={form.mailgun_api_key} onChange={(e) => setForm({ ...form, mailgun_api_key: e.target.value })} className="font-mono text-xs" placeholder={config?.configured ? "Leave blank to keep current" : "key-xxxxx"} required={!config?.configured} /></div>
+            <div className="space-y-1"><Label className="text-xs">Mailgun Domain</Label><Input value={form.mailgun_domain} onChange={(e) => setForm({ ...form, mailgun_domain: e.target.value })} className="font-mono text-xs" required /></div>
+            <div className="space-y-1"><Label className="text-xs">Base URL</Label><Input value={form.mailgun_base_url} onChange={(e) => setForm({ ...form, mailgun_base_url: e.target.value })} className="font-mono text-xs" /></div>
+            <div className="flex gap-2 pt-1">
+              <Button type="submit" size="sm" disabled={saving}>{saving ? "Saving..." : "Save"}</Button>
+              <Button type="button" variant="ghost" size="sm" onClick={() => setEditing(false)}>Cancel</Button>
+            </div>
+          </form>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -474,198 +227,121 @@ export default function Dashboard() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [totalLeads, setTotalLeads] = useState(0);
   const [loading, setLoading] = useState(true);
-
-  // Filters
   const [sourceFilter, setSourceFilter] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
   const [page, setPage] = useState(0);
   const PAGE_SIZE = 25;
-
-  // Tab
   const [activeTab, setActiveTab] = useState<"overview" | "leads" | "settings">("overview");
 
-  // Check session on mount
   useEffect(() => {
-    fetch("/api/auth/me")
-      .then((r) => {
-        if (!r.ok) {
-          router.push("/login");
-          return null;
-        }
-        return r.json();
-      })
-      .then((data) => {
-        if (data?.authenticated) {
-          setUser(data.user);
-          setLoading(false);
-        }
-      })
-      .catch(() => {
-        router.push("/login");
-      });
+    fetch("/api/auth/me").then((r) => {
+      if (!r.ok) { router.push("/login"); return null; }
+      return r.json();
+    }).then((data) => { if (data?.authenticated) { setUser(data.user); setLoading(false); } }).catch(() => router.push("/login"));
   }, [router]);
 
   const fetchProjects = useCallback(async () => {
     const res = await fetch("/api/projects");
-    if (res.ok) {
-      const data = await res.json();
-      setProjects(data.projects);
-      if (!selectedId && data.projects.length > 0) {
-        setSelectedId(data.projects[0].id);
-      }
-    }
+    if (res.ok) { const d = await res.json(); setProjects(d.projects); if (!selectedId && d.projects.length > 0) setSelectedId(d.projects[0].id); }
   }, [selectedId]);
 
-  useEffect(() => {
-    if (user) fetchProjects();
-  }, [user, fetchProjects]);
+  useEffect(() => { if (user) fetchProjects(); }, [user, fetchProjects]);
 
-  // Fetch stats when project changes
   useEffect(() => {
     if (!user || !selectedId) return;
-    fetch(`/api/leads/stats?projectId=${selectedId}`)
-      .then((r) => r.ok ? r.json() : null)
-      .then((s) => setStats(s));
+    fetch(`/api/leads/stats?projectId=${selectedId}`).then((r) => r.ok ? r.json() : null).then((s) => setStats(s));
   }, [user, selectedId]);
 
-  // Fetch leads with filters
   const fetchLeads = useCallback(async () => {
     if (!user || !selectedId) return;
-    const params = new URLSearchParams({
-      projectId: selectedId,
-      limit: String(PAGE_SIZE),
-      offset: String(page * PAGE_SIZE),
-    });
+    const params = new URLSearchParams({ projectId: selectedId, limit: String(PAGE_SIZE), offset: String(page * PAGE_SIZE) });
     if (sourceFilter) params.set("source", sourceFilter);
-
     const res = await fetch(`/api/leads?${params}`);
-    if (res.ok) {
-      const data = await res.json();
-      setLeads(data.leads ?? []);
-      setTotalLeads(data.total ?? 0);
-    }
+    if (res.ok) { const d = await res.json(); setLeads(d.leads ?? []); setTotalLeads(d.total ?? 0); }
   }, [user, selectedId, sourceFilter, page]);
 
   useEffect(() => { fetchLeads(); }, [fetchLeads]);
-
-  // Reset filters when project changes
-  useEffect(() => {
-    setSourceFilter("");
-    setTypeFilter("");
-    setPage(0);
-    setActiveTab("overview");
-  }, [selectedId]);
+  useEffect(() => { setSourceFilter(""); setTypeFilter(""); setPage(0); setActiveTab("overview"); }, [selectedId]);
 
   const exportCSV = () => {
     if (!leads.length) return;
-    const headers = ["Name", "Email", "Phone", "Type", "Source", "Date"];
-    const rows = leads.map((l) => [
-      l.name || "",
-      l.email || "",
-      l.phone || "",
-      l.type || "",
-      l.source,
-      new Date(l.created_at).toLocaleString(),
-    ]);
-    const csv = [headers, ...rows].map((r) => r.map((c) => `"${c}"`).join(",")).join("\n");
+    const h = ["Name", "Email", "Phone", "Type", "Source", "Date"];
+    const rows = leads.map((l) => [l.name || "", l.email || "", l.phone || "", l.type || "", l.source, new Date(l.created_at).toLocaleString()]);
+    const csv = [h, ...rows].map((r) => r.map((c) => `"${c}"`).join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `leads-${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
+    const a = document.createElement("a"); a.href = url; a.download = `leads-${new Date().toISOString().slice(0, 10)}.csv`; a.click();
     URL.revokeObjectURL(url);
   };
 
-  const handleLogout = async () => {
-    await fetch("/api/auth/logout", { method: "POST" });
-    router.push("/login");
-  };
+  const handleLogout = async () => { await fetch("/api/auth/logout", { method: "POST" }); router.push("/login"); };
+  const filteredLeads = typeFilter ? leads.filter((l) => l.type === typeFilter) : leads;
 
-  const filteredLeads = typeFilter
-    ? leads.filter((l) => l.type === typeFilter)
-    : leads;
-
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-gray-300 border-t-gray-900" />
-          <p className="mt-3 text-sm text-gray-500">Loading...</p>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return (
+    <div className="flex min-h-screen items-center justify-center bg-background">
+      <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-muted border-t-primary" />
+    </div>
+  );
 
   const selectedProject = projects.find((p) => p.id === selectedId);
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="flex min-h-screen bg-background">
       {/* Sidebar */}
-      <aside className="w-64 shrink-0 border-r bg-white p-5">
-        <h1 className="text-lg font-bold text-gray-900">UnlockAI</h1>
-        <p className="text-xs text-gray-500">Lead Tracker</p>
+      <aside className="w-60 shrink-0 border-r bg-card p-4 flex flex-col">
+        <div className="flex items-center gap-2.5 px-1">
+          <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground font-bold text-xs">U</div>
+          <div>
+            <p className="text-sm font-semibold text-foreground leading-none">UnlockAI</p>
+            <p className="text-[11px] text-muted-foreground">Lead Tracker</p>
+          </div>
+        </div>
 
-        <div className="mt-6 space-y-1">
-          <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-gray-400">
-            Projects
-          </p>
+        <Separator className="my-4" />
+
+        <p className="mb-2 px-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Projects</p>
+        <div className="space-y-1">
           {projects.map((p) => (
             <button
               key={p.id}
               onClick={() => setSelectedId(p.id)}
-              className={`w-full rounded-lg px-3 py-2 text-left text-sm transition-colors ${
-                p.id === selectedId
-                  ? "bg-gray-900 font-medium text-white"
-                  : "text-gray-700 hover:bg-gray-100"
+              className={`w-full rounded-md px-2.5 py-2 text-left text-sm transition-colors ${
+                p.id === selectedId ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-accent"
               }`}
             >
-              <span className="block truncate">{p.name}</span>
-              <span className={`text-[10px] ${p.id === selectedId ? "text-gray-300" : "text-gray-400"}`}>
+              <span className="block truncate font-medium">{p.name}</span>
+              <span className={`text-[10px] ${p.id === selectedId ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
                 {p.lead_count} leads &middot; {p.active_keys} keys
               </span>
             </button>
           ))}
-          <div className="pt-2">
-            <NewProjectForm onCreated={fetchProjects} />
-          </div>
+        </div>
+        <div className="mt-2">
+          <NewProjectForm onCreated={fetchProjects} />
         </div>
 
-        {/* User info + logout */}
-        <div className="mt-8 border-t pt-4">
+        <div className="mt-auto pt-4 border-t">
           {user && (
-            <div className="mb-2">
-              <p className="truncate text-sm font-medium text-gray-900">{user.name}</p>
-              <p className="truncate text-[11px] text-gray-400">{user.email}</p>
+            <div className="px-1 mb-2">
+              <p className="truncate text-sm font-medium text-foreground">{user.name}</p>
+              <p className="truncate text-[11px] text-muted-foreground">{user.email}</p>
             </div>
           )}
-          <button
-            onClick={handleLogout}
-            className="text-xs text-gray-400 hover:text-gray-600"
-          >
+          <Button variant="ghost" size="sm" className="w-full justify-start text-muted-foreground" onClick={handleLogout}>
             Sign out
-          </button>
+          </Button>
         </div>
       </aside>
 
-      {/* Main content */}
-      <main className="flex-1 overflow-auto p-6 md:p-10">
+      {/* Main */}
+      <main className="flex-1 overflow-auto p-6 lg:p-8">
         {!selectedProject ? (
-          <div className="flex h-full items-center justify-center text-gray-400">
-            Create a project to get started
-          </div>
+          <div className="flex h-full items-center justify-center text-muted-foreground">Create a project to get started</div>
         ) : (
           <>
-            {/* Header */}
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900">
-                  {selectedProject.name}
-                </h2>
-                <code className="rounded bg-gray-100 px-1.5 py-0.5 text-xs font-mono text-gray-500">
-                  {selectedProject.slug}
-                </code>
-              </div>
+            <div>
+              <h1 className="text-2xl font-semibold text-foreground">{selectedProject.name}</h1>
+              <code className="text-xs text-muted-foreground">{selectedProject.slug}</code>
             </div>
 
             {/* Tabs */}
@@ -675,9 +351,7 @@ export default function Dashboard() {
                   key={tab}
                   onClick={() => setActiveTab(tab)}
                   className={`px-4 py-2.5 text-sm font-medium capitalize transition-colors ${
-                    activeTab === tab
-                      ? "border-b-2 border-gray-900 text-gray-900"
-                      : "text-gray-500 hover:text-gray-700"
+                    activeTab === tab ? "border-b-2 border-primary text-foreground" : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
                   {tab}
@@ -685,213 +359,154 @@ export default function Dashboard() {
               ))}
             </div>
 
-            {/* Overview Tab */}
+            {/* Overview */}
             {activeTab === "overview" && (
               <>
-                <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-4">
+                <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
                   {[
-                    { label: "Total Leads", value: stats?.total ?? 0, color: "text-gray-900" },
-                    { label: "Today", value: stats?.today ?? 0, color: "text-blue-600" },
-                    { label: "This Week", value: stats?.thisWeek ?? 0, color: "text-purple-600" },
-                    { label: "This Month", value: stats?.thisMonth ?? 0, color: "text-green-600" },
-                  ].map(({ label, value, color }) => (
-                    <div key={label} className="rounded-xl border bg-white p-5 shadow-sm">
-                      <p className="text-sm text-gray-500">{label}</p>
-                      <p className={`mt-1 text-3xl font-bold ${color}`}>{value}</p>
-                    </div>
+                    { label: "Total Leads", value: stats?.total ?? 0 },
+                    { label: "Today", value: stats?.today ?? 0 },
+                    { label: "This Week", value: stats?.thisWeek ?? 0 },
+                    { label: "This Month", value: stats?.thisMonth ?? 0 },
+                  ].map(({ label, value }) => (
+                    <Card key={label}>
+                      <CardContent className="pt-5">
+                        <p className="text-sm text-muted-foreground">{label}</p>
+                        <p className="mt-1 text-3xl font-bold text-foreground">{value}</p>
+                      </CardContent>
+                    </Card>
                   ))}
                 </div>
 
                 <div className="mt-6 grid gap-6 lg:grid-cols-2">
-                  <div className="rounded-xl border bg-white p-5 shadow-sm">
-                    <h3 className="text-sm font-semibold text-gray-900">By Source</h3>
-                    {stats?.bySource?.length ? (
-                      <div className="mt-3 space-y-2">
-                        {stats.bySource.map(({ source, count }) => {
-                          const total = stats.total || 1;
-                          const pct = Math.round((count / total) * 100);
-                          return (
+                  <Card>
+                    <CardHeader className="pb-3"><CardTitle className="text-sm font-medium">By Source</CardTitle></CardHeader>
+                    <CardContent>
+                      {stats?.bySource?.length ? (
+                        <div className="space-y-3">
+                          {stats.bySource.map(({ source, count }) => (
                             <div key={source}>
                               <div className="flex items-center justify-between mb-1">
                                 <SourceBadge source={source} />
-                                <span className="text-sm font-semibold text-gray-900">{count}</span>
+                                <span className="text-sm font-semibold">{count}</span>
                               </div>
-                              <div className="h-1.5 rounded-full bg-gray-100">
-                                <div className="h-1.5 rounded-full bg-blue-500 transition-all" style={{ width: `${pct}%` }} />
+                              <div className="h-1.5 rounded-full bg-muted">
+                                <div className="h-1.5 rounded-full bg-primary transition-all" style={{ width: `${Math.round((count / (stats.total || 1)) * 100)}%` }} />
                               </div>
                             </div>
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      <p className="mt-3 text-sm text-gray-400">No data yet</p>
-                    )}
-                  </div>
+                          ))}
+                        </div>
+                      ) : <p className="text-sm text-muted-foreground">No data yet</p>}
+                    </CardContent>
+                  </Card>
 
-                  <div className="rounded-xl border bg-white p-5 shadow-sm">
-                    <h3 className="text-sm font-semibold text-gray-900">By Type</h3>
-                    {stats?.byType?.length ? (
-                      <div className="mt-3 space-y-2">
-                        {stats.byType.map(({ type, count }) => {
-                          const total = stats.total || 1;
-                          const pct = Math.round((count / total) * 100);
-                          return (
+                  <Card>
+                    <CardHeader className="pb-3"><CardTitle className="text-sm font-medium">By Type</CardTitle></CardHeader>
+                    <CardContent>
+                      {stats?.byType?.length ? (
+                        <div className="space-y-3">
+                          {stats.byType.map(({ type, count }) => (
                             <div key={type}>
                               <div className="flex items-center justify-between mb-1">
-                                <span className="rounded-full bg-green-50 px-3 py-1 text-xs font-medium text-green-700">{type}</span>
-                                <span className="text-sm font-semibold text-gray-900">{count}</span>
+                                <Badge variant="outline">{type}</Badge>
+                                <span className="text-sm font-semibold">{count}</span>
                               </div>
-                              <div className="h-1.5 rounded-full bg-gray-100">
-                                <div className="h-1.5 rounded-full bg-green-500 transition-all" style={{ width: `${pct}%` }} />
+                              <div className="h-1.5 rounded-full bg-muted">
+                                <div className="h-1.5 rounded-full bg-chart-2 transition-all" style={{ width: `${Math.round((count / (stats.total || 1)) * 100)}%` }} />
                               </div>
                             </div>
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      <p className="mt-3 text-sm text-gray-400">No data yet</p>
-                    )}
-                  </div>
+                          ))}
+                        </div>
+                      ) : <p className="text-sm text-muted-foreground">No data yet</p>}
+                    </CardContent>
+                  </Card>
                 </div>
 
-                <div className="mt-6 rounded-xl border bg-white shadow-sm">
-                  <div className="flex items-center justify-between border-b px-5 py-4">
-                    <h3 className="text-sm font-semibold text-gray-900">Recent Leads</h3>
-                    <button onClick={() => setActiveTab("leads")} className="text-xs font-medium text-blue-600 hover:text-blue-800">
-                      View All
-                    </button>
-                  </div>
-                  {leads.length ? (
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-left text-sm">
-                        <thead className="border-b bg-gray-50 text-xs uppercase text-gray-500">
-                          <tr>
-                            <th className="px-5 py-3">Name</th>
-                            <th className="px-5 py-3">Contact</th>
-                            <th className="px-5 py-3">Type</th>
-                            <th className="px-5 py-3">Source</th>
-                            <th className="px-5 py-3">Date</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y">
-                          {leads.slice(0, 10).map((lead) => (
-                            <tr key={lead.id} className="hover:bg-gray-50">
-                              <td className="px-5 py-3 font-medium text-gray-900">{lead.name ?? "—"}</td>
-                              <td className="px-5 py-3">
-                                <div className="text-gray-600">{lead.email ?? "—"}</div>
-                                {lead.phone && <div className="text-xs text-gray-400">{lead.phone}</div>}
-                              </td>
-                              <td className="px-5 py-3">
-                                {lead.type ? (
-                                  <span className="rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700">{lead.type}</span>
-                                ) : "—"}
-                              </td>
-                              <td className="px-5 py-3"><SourceBadge source={lead.source} /></td>
-                              <td className="px-5 py-3 text-gray-500 whitespace-nowrap">{new Date(lead.created_at).toLocaleDateString()}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  ) : (
-                    <div className="px-5 py-10 text-center text-gray-400">No leads recorded yet.</div>
-                  )}
-                </div>
+                <Card className="mt-6">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+                    <CardTitle className="text-sm font-medium">Recent Leads</CardTitle>
+                    <Button variant="link" size="sm" className="text-xs" onClick={() => setActiveTab("leads")}>View All</Button>
+                  </CardHeader>
+                  <CardContent className="px-0 pb-0">
+                    {leads.length ? (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left text-sm">
+                          <thead className="border-y bg-muted/50 text-xs text-muted-foreground">
+                            <tr><th className="px-5 py-2.5 font-medium">Name</th><th className="px-5 py-2.5 font-medium">Contact</th><th className="px-5 py-2.5 font-medium">Type</th><th className="px-5 py-2.5 font-medium">Source</th><th className="px-5 py-2.5 font-medium">Date</th></tr>
+                          </thead>
+                          <tbody className="divide-y">
+                            {leads.slice(0, 10).map((lead) => (
+                              <tr key={lead.id} className="hover:bg-muted/30 transition-colors">
+                                <td className="px-5 py-2.5 font-medium">{lead.name ?? "—"}</td>
+                                <td className="px-5 py-2.5"><div className="text-foreground">{lead.email ?? "—"}</div>{lead.phone && <div className="text-xs text-muted-foreground">{lead.phone}</div>}</td>
+                                <td className="px-5 py-2.5">{lead.type ? <Badge variant="outline">{lead.type}</Badge> : "—"}</td>
+                                <td className="px-5 py-2.5"><SourceBadge source={lead.source} /></td>
+                                <td className="px-5 py-2.5 text-muted-foreground whitespace-nowrap">{new Date(lead.created_at).toLocaleDateString()}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : <div className="px-5 py-10 text-center text-muted-foreground">No leads recorded yet.</div>}
+                  </CardContent>
+                </Card>
               </>
             )}
 
-            {/* Leads Tab */}
+            {/* Leads */}
             {activeTab === "leads" && (
               <>
                 <div className="mt-6 flex flex-wrap items-center gap-3">
-                  <select
-                    value={sourceFilter}
-                    onChange={(e) => { setSourceFilter(e.target.value); setPage(0); }}
-                    className="rounded-lg border bg-white px-3 py-2 text-sm text-gray-700 outline-none focus:ring-2 focus:ring-blue-200"
-                  >
+                  <select value={sourceFilter} onChange={(e) => { setSourceFilter(e.target.value); setPage(0); }} className="rounded-md border bg-card px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring/30">
                     <option value="">All Sources</option>
-                    <option value="quote_form">Quote Form</option>
-                    <option value="chatbot">Chatbot</option>
-                    <option value="phone_click">Phone Click</option>
-                    <option value="contact_form">Contact Form</option>
+                    <option value="quote_form">Quote Form</option><option value="chatbot">Chatbot</option><option value="phone_click">Phone Click</option><option value="contact_form">Contact Form</option>
                   </select>
-                  <select
-                    value={typeFilter}
-                    onChange={(e) => setTypeFilter(e.target.value)}
-                    className="rounded-lg border bg-white px-3 py-2 text-sm text-gray-700 outline-none focus:ring-2 focus:ring-blue-200"
-                  >
+                  <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} className="rounded-md border bg-card px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring/30">
                     <option value="">All Types</option>
-                    {(stats?.byType || []).map(({ type }) => (
-                      <option key={type} value={type}>{type}</option>
-                    ))}
+                    {(stats?.byType || []).map(({ type }) => <option key={type} value={type}>{type}</option>)}
                   </select>
                   <div className="flex-1" />
-                  <span className="text-xs text-gray-500">{totalLeads} total lead{totalLeads !== 1 ? "s" : ""}</span>
-                  <button onClick={exportCSV} className="rounded-lg border bg-white px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50">
-                    Export CSV
-                  </button>
+                  <span className="text-xs text-muted-foreground">{totalLeads} lead{totalLeads !== 1 ? "s" : ""}</span>
+                  <Button variant="outline" size="sm" onClick={exportCSV}>Export CSV</Button>
                 </div>
 
-                <div className="mt-4 rounded-xl border bg-white shadow-sm">
-                  {filteredLeads.length ? (
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-left text-sm">
-                        <thead className="border-b bg-gray-50 text-xs uppercase text-gray-500">
-                          <tr>
-                            <th className="px-5 py-3">Name</th>
-                            <th className="px-5 py-3">Email</th>
-                            <th className="px-5 py-3">Phone</th>
-                            <th className="px-5 py-3">Type</th>
-                            <th className="px-5 py-3">Source</th>
-                            <th className="px-5 py-3">Date</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y">
-                          {filteredLeads.map((lead) => (
-                            <tr key={lead.id} className="hover:bg-gray-50">
-                              <td className="px-5 py-3 font-medium text-gray-900">{lead.name ?? "—"}</td>
-                              <td className="px-5 py-3 text-gray-600">{lead.email ?? "—"}</td>
-                              <td className="px-5 py-3 text-gray-600">{lead.phone ?? "—"}</td>
-                              <td className="px-5 py-3">
-                                {lead.type ? (
-                                  <span className="rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700">{lead.type}</span>
-                                ) : "—"}
-                              </td>
-                              <td className="px-5 py-3"><SourceBadge source={lead.source} /></td>
-                              <td className="px-5 py-3 text-gray-500 whitespace-nowrap">{new Date(lead.created_at).toLocaleString()}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  ) : (
-                    <div className="px-5 py-10 text-center text-gray-400">No leads match the current filters.</div>
-                  )}
-                </div>
+                <Card className="mt-4">
+                  <CardContent className="px-0 pb-0 pt-0">
+                    {filteredLeads.length ? (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left text-sm">
+                          <thead className="border-b bg-muted/50 text-xs text-muted-foreground">
+                            <tr><th className="px-5 py-2.5 font-medium">Name</th><th className="px-5 py-2.5 font-medium">Email</th><th className="px-5 py-2.5 font-medium">Phone</th><th className="px-5 py-2.5 font-medium">Type</th><th className="px-5 py-2.5 font-medium">Source</th><th className="px-5 py-2.5 font-medium">Date</th></tr>
+                          </thead>
+                          <tbody className="divide-y">
+                            {filteredLeads.map((lead) => (
+                              <tr key={lead.id} className="hover:bg-muted/30 transition-colors">
+                                <td className="px-5 py-2.5 font-medium">{lead.name ?? "—"}</td>
+                                <td className="px-5 py-2.5 text-muted-foreground">{lead.email ?? "—"}</td>
+                                <td className="px-5 py-2.5 text-muted-foreground">{lead.phone ?? "—"}</td>
+                                <td className="px-5 py-2.5">{lead.type ? <Badge variant="outline">{lead.type}</Badge> : "—"}</td>
+                                <td className="px-5 py-2.5"><SourceBadge source={lead.source} /></td>
+                                <td className="px-5 py-2.5 text-muted-foreground whitespace-nowrap">{new Date(lead.created_at).toLocaleString()}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : <div className="px-5 py-10 text-center text-muted-foreground">No leads match filters.</div>}
+                  </CardContent>
+                </Card>
 
                 {totalLeads > PAGE_SIZE && (
                   <div className="mt-4 flex items-center justify-between">
-                    <button
-                      onClick={() => setPage((p) => Math.max(0, p - 1))}
-                      disabled={page === 0}
-                      className="rounded-lg border bg-white px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40"
-                    >
-                      Previous
-                    </button>
-                    <span className="text-xs text-gray-500">Page {page + 1} of {Math.ceil(totalLeads / PAGE_SIZE)}</span>
-                    <button
-                      onClick={() => setPage((p) => p + 1)}
-                      disabled={(page + 1) * PAGE_SIZE >= totalLeads}
-                      className="rounded-lg border bg-white px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40"
-                    >
-                      Next
-                    </button>
+                    <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0}>Previous</Button>
+                    <span className="text-xs text-muted-foreground">Page {page + 1} of {Math.ceil(totalLeads / PAGE_SIZE)}</span>
+                    <Button variant="outline" size="sm" onClick={() => setPage((p) => p + 1)} disabled={(page + 1) * PAGE_SIZE >= totalLeads}>Next</Button>
                   </div>
                 )}
               </>
             )}
 
-            {/* Settings Tab */}
+            {/* Settings */}
             {activeTab === "settings" && (
               <div className="mt-6 grid gap-6 lg:grid-cols-2">
                 <ApiKeysPanel projectId={selectedProject.id} />

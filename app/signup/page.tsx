@@ -2,6 +2,10 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 
 export default function SignUpPage() {
   const [name, setName] = useState("");
@@ -24,12 +28,7 @@ export default function SignUpPage() {
       });
 
       const data = await res.json();
-
-      if (!res.ok) {
-        setError(data.error);
-        return;
-      }
-
+      if (!res.ok) { setError(data.error); return; }
       setSuccess(true);
     } catch {
       setError("Something went wrong. Please try again.");
@@ -39,104 +38,97 @@ export default function SignUpPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
-      <div className="w-full max-w-sm">
-        <div className="rounded-2xl border bg-white p-8 shadow-sm">
-          <div className="mb-6">
-            <h1 className="text-xl font-bold text-gray-900">Create Account</h1>
-            <p className="mt-1 text-sm text-gray-500">
-              UnlockAI Lead Tracker
-            </p>
+    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+      <div className="w-full max-w-md">
+        <div className="mb-8 text-center">
+          <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold text-sm">
+            U
           </div>
-
-          {success ? (
-            <div className="rounded-lg border border-green-200 bg-green-50 p-4">
-              <p className="text-sm font-medium text-green-800">
-                Verification email sent!
-              </p>
-              <p className="mt-1 text-sm text-green-700">
-                Check your inbox at <strong>{email}</strong> and click the verification link to activate your account.
-              </p>
-              <Link
-                href="/login"
-                className="mt-4 inline-block text-sm font-medium text-green-700 underline hover:text-green-800"
-              >
-                Go to Login
-              </Link>
-            </div>
-          ) : (
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="mb-1 block text-xs font-medium text-gray-600">
-                  Full Name
-                </label>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Sebastian Ordas"
-                  className="w-full rounded-lg border px-4 py-2.5 text-sm outline-none transition focus:border-gray-400 focus:ring-2 focus:ring-blue-100"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="mb-1 block text-xs font-medium text-gray-600">
-                  Email
-                </label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@unlockaiagency.com"
-                  className="w-full rounded-lg border px-4 py-2.5 text-sm outline-none transition focus:border-gray-400 focus:ring-2 focus:ring-blue-100"
-                  required
-                />
-                <p className="mt-1 text-[11px] text-gray-400">
-                  Only @unlockaiagency.com emails allowed
-                </p>
-              </div>
-
-              <div>
-                <label className="mb-1 block text-xs font-medium text-gray-600">
-                  Password
-                </label>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="At least 8 characters"
-                  minLength={8}
-                  className="w-full rounded-lg border px-4 py-2.5 text-sm outline-none transition focus:border-gray-400 focus:ring-2 focus:ring-blue-100"
-                  required
-                />
-              </div>
-
-              {error && (
-                <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">
-                  {error}
-                </p>
-              )}
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-gray-800 disabled:opacity-50"
-              >
-                {loading ? "Creating account..." : "Sign Up"}
-              </button>
-            </form>
-          )}
-
-          {!success && (
-            <p className="mt-6 text-center text-sm text-gray-500">
-              Already have an account?{" "}
-              <Link href="/login" className="font-medium text-gray-900 hover:underline">
-                Log in
-              </Link>
-            </p>
-          )}
+          <h2 className="text-sm font-medium text-muted-foreground">UnlockAI Lead Tracker</h2>
         </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Create your account</CardTitle>
+            <CardDescription>
+              Sign up with your @unlockaiagency.com email
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {success ? (
+              <div className="rounded-lg border border-chart-4/30 bg-chart-4/10 p-4 text-center">
+                <p className="text-sm font-medium text-foreground">Verification email sent!</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Check your inbox at <strong>{email}</strong> and click the link to activate.
+                </p>
+                <Link href="/login">
+                  <Button variant="outline" className="mt-4">Go to Login</Button>
+                </Link>
+              </div>
+            ) : (
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Full Name</Label>
+                  <Input
+                    id="name"
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Sebastian Ordas"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="you@unlockaiagency.com"
+                    required
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Only @unlockaiagency.com emails are allowed
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="At least 8 characters"
+                    minLength={8}
+                    required
+                  />
+                </div>
+
+                {error && (
+                  <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                    {error}
+                  </div>
+                )}
+
+                <Button type="submit" className="w-full" disabled={loading}>
+                  {loading ? "Creating account..." : "Create Account"}
+                </Button>
+              </form>
+            )}
+          </CardContent>
+        </Card>
+
+        {!success && (
+          <p className="mt-4 text-center text-sm text-muted-foreground">
+            Already have an account?{" "}
+            <Link href="/login" className="font-medium text-primary hover:underline">
+              Log in
+            </Link>
+          </p>
+        )}
       </div>
     </div>
   );
