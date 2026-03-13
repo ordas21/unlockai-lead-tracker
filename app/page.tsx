@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, Fragment } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -23,8 +23,64 @@ type NotificationConfig = { configured: boolean; enabled?: boolean; to_email?: s
 const SOURCE_LABELS: Record<string, string> = { quote_form: "Quote Form", chatbot: "Chatbot", phone_click: "Phone Click", contact_form: "Contact Form" };
 const SOURCE_VARIANTS: Record<string, "default" | "secondary" | "outline" | "destructive"> = { quote_form: "default", chatbot: "secondary", phone_click: "outline", contact_form: "secondary" };
 
+const METADATA_LABELS: Record<string, string> = {
+  address: "Address", roofAge: "Roof Age", yearBuilt: "Year Built",
+  squareFt: "Square Footage", drivers: "Drivers", vins: "Vehicles / VINs",
+  currentCoverage: "Current Coverage", riderExperience: "Rider Experience",
+  rvType: "RV Type", fullTimeUse: "Full-Time Use", boatType: "Boat Type",
+  boatLength: "Boat Length", boatValue: "Boat Value", waterType: "Water Type",
+  existingPolicies: "Existing Policies", desiredCoverage: "Desired Coverage",
+  businessType: "Business Type", employees: "Employees",
+  annualRevenue: "Annual Revenue", personalPropertyValue: "Personal Property Value",
+  floodZone: "Flood Zone", message: "Message",
+};
+
+function parseMetadata(raw: string | null): Record<string, string> | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    if (typeof parsed !== "object" || !parsed) return null;
+    const entries = Object.entries(parsed).filter(([, v]) => v != null && v !== "");
+    return entries.length > 0 ? Object.fromEntries(entries) as Record<string, string> : null;
+  } catch { return null; }
+}
+
 function SourceBadge({ source }: { source: string }) {
   return <Badge variant={SOURCE_VARIANTS[source] || "outline"}>{SOURCE_LABELS[source] || source}</Badge>;
+}
+
+function LeadDetail({ lead }: { lead: Lead }) {
+  const meta = parseMetadata(lead.metadata);
+  return (
+    <div className="grid gap-3 sm:grid-cols-2">
+      <div className="space-y-2">
+        <div>
+          <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Contact</p>
+          <p className="mt-1 text-sm font-medium">{lead.name || "—"}</p>
+          {lead.email && <a href={`mailto:${lead.email}`} className="text-sm text-blue-600 hover:underline">{lead.email}</a>}
+          {lead.phone && <a href={`tel:${lead.phone.replace(/\D/g, "")}`} className="block text-sm text-blue-600 hover:underline">{lead.phone}</a>}
+        </div>
+        <div className="flex items-center gap-2 text-sm">
+          <SourceBadge source={lead.source} />
+          {lead.type && <Badge variant="outline">{lead.type}</Badge>}
+        </div>
+        <p className="text-xs text-muted-foreground">
+          {new Date(lead.created_at).toLocaleString("en-US", { dateStyle: "long", timeStyle: "short" })}
+        </p>
+      </div>
+      {meta && (
+        <div className="space-y-1.5">
+          <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Details</p>
+          {Object.entries(meta).map(([key, value]) => (
+            <div key={key} className="flex gap-2 text-sm">
+              <span className="shrink-0 font-medium text-muted-foreground">{METADATA_LABELS[key] || key}:</span>
+              <span className="whitespace-pre-wrap">{String(value)}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 // ── Components ──
@@ -232,6 +288,7 @@ export default function Dashboard() {
   const [page, setPage] = useState(0);
   const PAGE_SIZE = 25;
   const [activeTab, setActiveTab] = useState<"overview" | "leads" | "settings">("overview");
+  const [expandedLead, setExpandedLead] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/auth/me").then((r) => {
@@ -436,13 +493,18 @@ export default function Dashboard() {
                           </thead>
                           <tbody className="divide-y">
                             {leads.slice(0, 10).map((lead) => (
-                              <tr key={lead.id} className="hover:bg-muted/30 transition-colors">
-                                <td className="px-5 py-2.5 font-medium">{lead.name ?? "—"}</td>
-                                <td className="px-5 py-2.5"><div className="text-foreground">{lead.email ?? "—"}</div>{lead.phone && <div className="text-xs text-muted-foreground">{lead.phone}</div>}</td>
-                                <td className="px-5 py-2.5">{lead.type ? <Badge variant="outline">{lead.type}</Badge> : "—"}</td>
-                                <td className="px-5 py-2.5"><SourceBadge source={lead.source} /></td>
-                                <td className="px-5 py-2.5 text-muted-foreground whitespace-nowrap">{new Date(lead.created_at).toLocaleDateString()}</td>
-                              </tr>
+                              <Fragment key={lead.id}>
+                                <tr onClick={() => setExpandedLead(expandedLead === lead.id ? null : lead.id)} className="hover:bg-muted/30 transition-colors cursor-pointer">
+                                  <td className="px-5 py-2.5 font-medium">{lead.name ?? "—"}</td>
+                                  <td className="px-5 py-2.5"><div className="text-foreground">{lead.email ?? "—"}</div>{lead.phone && <div className="text-xs text-muted-foreground">{lead.phone}</div>}</td>
+                                  <td className="px-5 py-2.5">{lead.type ? <Badge variant="outline">{lead.type}</Badge> : "—"}</td>
+                                  <td className="px-5 py-2.5"><SourceBadge source={lead.source} /></td>
+                                  <td className="px-5 py-2.5 text-muted-foreground whitespace-nowrap">{new Date(lead.created_at).toLocaleDateString()}</td>
+                                </tr>
+                                {expandedLead === lead.id && (
+                                  <tr><td colSpan={5} className="bg-muted/20 px-5 py-4"><LeadDetail lead={lead} /></td></tr>
+                                )}
+                              </Fragment>
                             ))}
                           </tbody>
                         </table>
@@ -480,14 +542,19 @@ export default function Dashboard() {
                           </thead>
                           <tbody className="divide-y">
                             {filteredLeads.map((lead) => (
-                              <tr key={lead.id} className="hover:bg-muted/30 transition-colors">
-                                <td className="px-5 py-2.5 font-medium">{lead.name ?? "—"}</td>
-                                <td className="px-5 py-2.5 text-muted-foreground">{lead.email ?? "—"}</td>
-                                <td className="px-5 py-2.5 text-muted-foreground">{lead.phone ?? "—"}</td>
-                                <td className="px-5 py-2.5">{lead.type ? <Badge variant="outline">{lead.type}</Badge> : "—"}</td>
-                                <td className="px-5 py-2.5"><SourceBadge source={lead.source} /></td>
-                                <td className="px-5 py-2.5 text-muted-foreground whitespace-nowrap">{new Date(lead.created_at).toLocaleString()}</td>
-                              </tr>
+                              <Fragment key={lead.id}>
+                                <tr onClick={() => setExpandedLead(expandedLead === lead.id ? null : lead.id)} className="hover:bg-muted/30 transition-colors cursor-pointer">
+                                  <td className="px-5 py-2.5 font-medium">{lead.name ?? "—"}</td>
+                                  <td className="px-5 py-2.5 text-muted-foreground">{lead.email ?? "—"}</td>
+                                  <td className="px-5 py-2.5 text-muted-foreground">{lead.phone ?? "—"}</td>
+                                  <td className="px-5 py-2.5">{lead.type ? <Badge variant="outline">{lead.type}</Badge> : "—"}</td>
+                                  <td className="px-5 py-2.5"><SourceBadge source={lead.source} /></td>
+                                  <td className="px-5 py-2.5 text-muted-foreground whitespace-nowrap">{new Date(lead.created_at).toLocaleString()}</td>
+                                </tr>
+                                {expandedLead === lead.id && (
+                                  <tr><td colSpan={6} className="bg-muted/20 px-5 py-4"><LeadDetail lead={lead} /></td></tr>
+                                )}
+                              </Fragment>
                             ))}
                           </tbody>
                         </table>
